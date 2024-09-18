@@ -7,11 +7,9 @@ from torch import optim
 
 import numpy as np
 import torch
-from torch import distributions
 
-from rob831.infrastructure import pytorch_util as ptu
 from rob831.policies.base_policy import BasePolicy
-
+from rob831.infrastructure import pytorch_util as ptu
 
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
@@ -81,9 +79,10 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
+        observation = ptu.from_numpy(observation)
         ac_prob = self.forward(observation)
-        action = ac_prob.sample()
-        action = action.cpu.numpy()
+        action  = ac_prob.sample()
+        action  = action.cpu().numpy()
         return action
 
     # update/train this policy
@@ -91,11 +90,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # Compare predicted actions to labelled actions
         raise NotImplementedError
 
-    # This function defines the forward pass of the network.
-    # You can return anything you want, but you should be able to differentiate
-    # through it. For example, you can return a torch.FloatTensor. You can also
-    # return more flexible objects, such as a
-    # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
         # For discrete polcy we have a discrete distribution given by the logits
         if self.discrete:
