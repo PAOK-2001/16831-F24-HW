@@ -7,33 +7,26 @@ from rob831.policies.loaded_gaussian_policy import LoadedGaussianPolicy
 
 class BC_Trainer(object):
 
-    def __init__(self, params):
-
+    def __init__(self, params: dict):
         #######################
         ## AGENT PARAMS
         #######################
-
         agent_params = {
             'n_layers': params['n_layers'],
             'size': params['size'],
             'learning_rate': params['learning_rate'],
             'max_replay_buffer_size': params['max_replay_buffer_size'],
             }
-
         self.params = params
         self.params['agent_class'] = BCAgent ## HW1: you will modify this
         self.params['agent_params'] = agent_params
-
         ################
         ## RL TRAINER
         ################
-
         self.rl_trainer = RL_Trainer(self.params) ## HW1: you will modify this
-
         #######################
         ## LOAD EXPERT POLICY
         #######################
-
         print('Loading expert policy from...', self.params['expert_policy_file'])
         self.loaded_expert_policy = LoadedGaussianPolicy(self.params['expert_policy_file'])
         print('Done restoring expert policy...')

@@ -1,7 +1,6 @@
 import abc
 import numpy as np
 
-
 class BasePolicy(object, metaclass=abc.ABCMeta):
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         raise NotImplementedError

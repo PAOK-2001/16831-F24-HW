@@ -7,7 +7,7 @@ import torch
 import pickle
 
 
-def create_linear_layer(W, b) -> nn.Linear:
+def create_linear_layer(W: np.array, b: np.array) -> nn.Linear:
     out_features, in_features = W.shape
     linear_layer = nn.Linear(
         in_features,
@@ -18,12 +18,11 @@ def create_linear_layer(W, b) -> nn.Linear:
     return linear_layer
 
 
-def read_layer(l):
-    assert list(l.keys()) == ['AffineLayer']
-    assert sorted(l['AffineLayer'].keys()) == ['W', 'b']
-    return l['AffineLayer']['W'].astype(np.float32), l['AffineLayer'][
+def read_layer(layer: dict):
+    assert list(layer.keys()) == ['AffineLayer']
+    assert sorted(layer['AffineLayer'].keys()) == ['W', 'b']
+    return layer['AffineLayer']['W'].astype(np.float32), layer['AffineLayer'][
         'b'].astype(np.float32)
-
 
 class LoadedGaussianPolicy(BasePolicy, nn.Module):
     def __init__(self, filename, **kwargs):

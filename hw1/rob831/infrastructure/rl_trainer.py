@@ -1,40 +1,31 @@
-from collections import OrderedDict
-import numpy as np
-import time
-
 import gym
+import time
 import torch
+import pickle 
+import numpy as np
 
+from collections import OrderedDict
 from rob831.infrastructure import pytorch_util as ptu
 from rob831.infrastructure.logger import Logger
 from rob831.infrastructure import utils
-import pickle 
 
-# how many rollouts to save as videos to tensorboard
-MAX_NVIDEO = 2
+MAX_NVIDEO = 2 # No. rollouts to save as videos to tensorboard
+
 # MAX_VIDEO_LEN = 40  # we overwrite this in the code below
 
-
-def make_env(env_name):
+def make_env(env_name) -> gym.Env:
     if env_name == 'Ant-v2':
         return gym.make(env_name)
     else:
         return gym.make(env_name)
 
-
 class RL_Trainer(object):
 
-    def __init__(self, params):
+    def __init__(self, params: dict):
 
-        #############
-        ## INIT
-        #############
-
-        # Get params, create logger, create TF session
         self.params = params
         self.logger = Logger(self.params['logdir'])
 
-        # Set random seeds
         seed = self.params['seed']
         np.random.seed(seed)
         torch.manual_seed(seed)
@@ -42,12 +33,7 @@ class RL_Trainer(object):
             use_gpu=not self.params['no_gpu'],
             gpu_id=self.params['which_gpu']
         )
-
-        #############
-        ## ENV
-        #############
-
-        # Make the gym environment
+        
         self.env = make_env(self.params['env_name'])
         self.env.reset(seed=seed)
 
@@ -72,16 +58,12 @@ class RL_Trainer(object):
         else:
             self.fps = self.env.metadata['render_fps']
 
-        #############
-        ## AGENT
-        #############
-
         agent_class = self.params['agent_class']
         self.agent = agent_class(self.env, self.params['agent_params'])
 
-    def run_training_loop(self, n_iter, collect_policy, eval_policy,
+    def run_training_loop(self, n_iter: int, collect_policy, eval_policy,
                         initial_expertdata=None, relabel_with_expert=False,
-                        start_relabel_with_expert=1, expert_policy=None):
+                        start_relabel_with_expert=1, expert_policy = None):
         """
         :param n_iter:  number of (dagger) iterations
         :param collect_policy:
@@ -143,9 +125,6 @@ class RL_Trainer(object):
                     print('\nSaving agent params')
                     self.agent.save('{}/policy_itr_{}.pt'.format(self.params['logdir'], itr))
 
-    ####################################
-    ####################################
-
     def collect_training_trajectories(
             self,
             itr,
@@ -168,11 +147,14 @@ class RL_Trainer(object):
         # HINT: depending on if it's the first iteration or not, decide whether to either
         # (1) load the data. In this case you can directly return as follows
         # ``` return loaded_paths, 0, None ```
+        if itr == 0:
+            return 
 
         # (2) collect `self.params['batch_size']` transitions
 
         # TODO collect `batch_size` samples to be used for training
         # HINT1: use sample_trajectories from utils
+        
         # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
         print("\nCollecting data to be used for training...")
         paths, envsteps_this_batch = TODO
@@ -186,7 +168,6 @@ class RL_Trainer(object):
             train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, self.MAX_VIDEO_LEN, True)
 
         return paths, envsteps_this_batch, train_video_paths
-
 
     def train_agent(self):
         print('\nTraining agent using sampled data from replay buffer...')
@@ -213,9 +194,6 @@ class RL_Trainer(object):
         # and replace paths[i]["action"] with these expert labels
 
         return paths
-
-    ####################################
-    ####################################
 
     def perform_logging(self, itr, paths, eval_policy, train_video_paths, training_logs):
 

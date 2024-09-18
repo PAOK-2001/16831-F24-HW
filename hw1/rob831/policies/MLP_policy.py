@@ -81,10 +81,14 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             observation = obs[None]
 
         # TODO return the action that the policy prescribes
-        raise NotImplementedError
+        ac_prob = self.forward(observation)
+        action = ac_prob.sample()
+        action = action.cpu.numpy()
+        return action
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
+        # Compare predicted actions to labelled actions
         raise NotImplementedError
 
     # This function defines the forward pass of the network.
@@ -93,11 +97,17 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+        # For discrete polcy we have a discrete distribution given by the logits
+        if self.discrete:
+            logits = self.logits_na(observation)
+            ac_prob = torch.distributions.Categorical(logits=logits)
 
-
-#####################################################
-#####################################################
+        # For continous actions the have a normal distribution, so output of network is mean and std.
+        else:
+            ac_mean = self.mean_net(observation)
+            ac_std  = torch.exp(self.logstd)
+            ac_prob = torch.distributions.Normal(ac_mean, ac_std)
+        return ac_prob
 
 class MLPPolicySL(MLPPolicy):
     def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
@@ -106,10 +116,28 @@ class MLPPolicySL(MLPPolicy):
 
     def update(
             self, observations, actions,
-            adv_n=None, acs_labels_na=None, qvals=None
+            adv_n = None, acs_labels_na=None, qvals=None
     ):
+
+        observations = ptu.from_numpy(observations)
+        actions = ptu.from_numpy(actions)
+
+        pred_actions = self.forward(observations)
+
         # TODO: update the policy and return the loss
-        loss = TODO
+        if self.discrete:
+            pred_actions = pred_actions.logits
+            actions = actions.long()
+
+        else:
+            pred_actions = pred_actions.rsample()
+
+        self.optimizer.zero_grad()
+        
+        loss = self.loss(actions, pred_actions)
+        loss.backward()
+
+        self.optimizer.step()
 
         return {
             # You can add extra logging information here, but keep this line
