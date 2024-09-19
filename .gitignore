@@ -1,5 +1,6 @@
 *.DS_Store
 hw1/data
+hw1/run_logs
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
