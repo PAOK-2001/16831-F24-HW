@@ -112,3 +112,25 @@ def convert_listofrollouts(paths, concat_rew=True):
 def get_pathlength(path):
     return len(path["reward"])
 
+def plot_dagger_results(results, tag, out_dir = 'data', show_reference = False):
+    import os
+    import matplotlib.pyplot as plt
+    
+    fixed_performace = [ 10344.518 for _ in range(len(results))]
+    BC_performance = [ 311.676 for _ in range(len(results)) ]
+
+    means = [mean for mean, _ in results]
+    stds = [std for _, std in results]
+
+    x_values = range(1, len(results) + 1)
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(x_values, means, yerr=stds, fmt='o', ecolor='r', capsize=5, capthick=2, linestyle='-', marker='s', label='Mean ± Std Dev')
+    if show_reference:
+        plt.plot(x_values, fixed_performace, c = 'green', label='Expert Data')
+        plt.plot(x_values, BC_performance, c= "purple", label='BC Policy')
+    plt.legend()
+
+    plt.xlabel('Iteration')
+    plt.ylabel('Value')
+    plt.title(f'Policy results (DAgger) {tag}')
+    plt.savefig(os.path.join(out_dir, f"DAgger_results_{tag}.png"))

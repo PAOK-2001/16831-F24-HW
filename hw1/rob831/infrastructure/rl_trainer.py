@@ -78,7 +78,7 @@ class RL_Trainer(object):
         # init vars at beginning of training
         self.total_envsteps = 0
         self.start_time = time.time()
-
+        results = []
         for itr in range(n_iter):
             print("\n\n********** Iteration %i ************"%itr)
 
@@ -101,6 +101,7 @@ class RL_Trainer(object):
                 collect_policy,
                 self.params['batch_size']
             )  # HW1: implement this function below
+            
             paths, envsteps_this_batch, train_video_paths = training_returns
             self.total_envsteps += envsteps_this_batch
 
@@ -113,18 +114,22 @@ class RL_Trainer(object):
 
             # train agent (using sampled data from replay buffer)
             training_logs = self.train_agent()  # HW1: implement this function below
-
+            
             # log/save
             if self.log_video or self.log_metrics:
 
                 # perform logging
                 print('\nBeginning logging procedure...')
-                self.perform_logging(
+                eval = self.perform_logging(
                     itr, paths, eval_policy, train_video_paths, training_logs)
+                results.append(eval)
 
                 if self.params['save_params']:
                     print('\nSaving agent params')
                     self.agent.save('{}/policy_itr_{}.pt'.format(self.params['logdir'], itr))
+
+        if relabel_with_expert:
+            utils.plot_dagger_results(results, self.params['env_name'])
 
     def collect_training_trajectories(
             self,
@@ -157,7 +162,7 @@ class RL_Trainer(object):
         # (2) collect `self.params['batch_size']` transitions
         # HINT1: use sample_trajectories from utils 
         # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
-        paths = utils.sample_trajectories(
+        paths, envsteps_this_batch = utils.sample_trajectories(
             env=self.env,
             policy= collect_policy,
             min_timesteps_per_batch = self.params['batch_size'],
@@ -165,7 +170,6 @@ class RL_Trainer(object):
             
         )
         print("\nCollecting data to be used for training...")
-        envsteps_this_batch = sum([len(path["observation"]) for path in paths])
 
         # collect more rollouts with the same policy, to be saved as videos in tensorboard
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
@@ -203,7 +207,9 @@ class RL_Trainer(object):
         # TODO relabel collected obsevations (from our policy) with labels from an expert policy
         # HINT: query the policy (using the get_action function) with paths[i]["observation"]
         # and replace paths[i]["action"] with these expert labels
-        breakpoint()
+        for i in range(len(paths)):
+            ob = paths[i]["observation"]
+            paths[i]["action"] = expert_policy.get_action(ob)
 
         return paths
 
@@ -227,6 +233,11 @@ class RL_Trainer(object):
 
         # save eval metrics
         if self.log_metrics:
+            losses = []
+            for log in training_logs:
+                loss =  log['Training Loss']
+                losses.append(loss)
+
             # returns, for logging
             train_returns = [path["reward"].sum() for path in paths]
             eval_returns = [eval_path["reward"].sum() for eval_path in eval_paths]
@@ -263,6 +274,10 @@ class RL_Trainer(object):
             for key, value in logs.items():
                 print('{} : {}'.format(key, value))
                 self.logger.log_scalar(value, key, itr)
-            print('Done logging...\n\n')
 
+            for i, loss in enumerate(losses):
+                self.logger._summ_writer.add_scalar('Training_Loss', loss, i)
+
+            print('Done logging...\n\n')
             self.logger.flush()
+            return np.mean(eval_returns), np.std(eval_returns)

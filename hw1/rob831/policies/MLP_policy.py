@@ -113,26 +113,18 @@ class MLPPolicySL(MLPPolicy):
             adv_n = None, acs_labels_na=None, qvals=None
     ):
 
+        self.optimizer.zero_grad()
+
         observations = ptu.from_numpy(observations)
         actions = ptu.from_numpy(actions)
 
         pred_actions = self.forward(observations)
+        pred_actions = pred_actions.rsample()
 
-        # TODO: update the policy and return the loss
-        if self.discrete:
-            pred_actions = pred_actions.logits
-            actions = actions.long()
-
-        else:
-            pred_actions = pred_actions.rsample()
-
-        self.optimizer.zero_grad()
-        
         loss = self.loss(actions, pred_actions)
         loss.backward()
 
         self.optimizer.step()
-
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
