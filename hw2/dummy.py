@@ -37,6 +37,6 @@ def _discounted_cumsum(rewards):
     return discounted_cumsums
 
 if __name__ == "__main__":
-    rewards = [i for i in range(10)]
+    rewards = [150, 200, 500, 1000, 239, 200, 1, 67584]
     print(_discounted_return(rewards))
     print(_discounted_cumsum(rewards))

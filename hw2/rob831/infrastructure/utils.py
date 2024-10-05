@@ -2,8 +2,7 @@ import numpy as np
 import time
 import copy
 
-############################################
-############################################
+########################################################################################
 
 def calculate_mean_prediction_error(env, action_sequence, models, data_statistics):
 
@@ -51,8 +50,7 @@ def perform_actions(env, actions):
 def mean_squared_error(a, b):
     return np.mean((a-b)**2)
 
-############################################
-############################################
+########################################################################################
 
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
     ob = env.reset()
@@ -115,8 +113,7 @@ def sample_n_trajectories(env, policy, ntraj, max_path_length, render=False, ren
 
     return paths
 
-############################################
-############################################
+########################################################################################
 
 def Path(obs, image_obs, acs, rewards, next_obs, terminals):
     """

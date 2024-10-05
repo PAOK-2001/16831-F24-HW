@@ -40,9 +40,9 @@ class PGAgent(BaseAgent):
             and the calculated qvals/advantages that come from the seen rewards.
         """
 
-        qvals = self.calculate_q_vals(rewards_list)
+        qvals      = self.calculate_q_vals(rewards_list)
         advantages = self.estimate_advantage(observations, rewards_list, qvals, terminals)
-        train_log = self.actor.update(observations, actions, advantages, qvals)
+        train_log  = self.actor.update(observations, actions, advantages, qvals)
 
         return train_log
 
@@ -78,10 +78,7 @@ class PGAgent(BaseAgent):
         if self.nn_baseline:
             values_normalized = self.actor.run_baseline_prediction(obs)
             assert values_normalized.ndim == q_values.ndim
-            # Values were trained with standardized q_values, so ensure that the predictions have 
-            # the same mean and standard deviation as the current batch of q_values. ie renormalize
-            values = unnormalize(values_normalized, np.mean(values_normalized), np.std(values_normalized))
-            values = normalize(values, np.mean(q_values), np.std(q_values))
+            values = normalize(values_normalized, np.mean(q_values), np.std(q_values))
             
             if self.gae_lambda is not None:
                 ## append a dummy T+1 value for simpler recursive calculation
@@ -96,16 +93,6 @@ class PGAgent(BaseAgent):
                 prev_gae = 0
                 # Recursively compute advantage estimates starting from timestep T.
                 for i in reversed(range(batch_size)):
-                    # # Use terminals to handle edge cases. terminals[i]
-                    # if terminals[i]: # is 1 if the state is the last in its trajectory, and
-                    #     delta = rewards[i] - self.gamma * values[i + 1]
-                    #     prev_gae = delta
-
-                    # else: ## 0 otherwise.
-                    #     delta = rewards[i] + self.gamma * values[i + 1] - values[i]
-                    #     prev_gae = delta + self.gamma * self.gae_lambda * prev_gae
-                    
-                    # NOTE: alternatively, could use the following code to handle edge cases
                     delta = rewards[i] + self.gamma * values[i + 1]   * (1 - terminals[i]) - values[i]
                     prev_gae = delta   + self.gamma * self.gae_lambda * prev_gae * (1 - terminals[i])
                     advantages[i] = prev_gae
