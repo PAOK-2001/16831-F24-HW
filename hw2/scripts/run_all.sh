@@ -2,7 +2,7 @@
 set -e
 
 if [ "$#" -eq 0 ]; then
-    echo "Usage: $0 {q5|q6|q7|all}"
+    echo "Usage: $0 {q5|q7|all}"
     exit 1
 fi
 
@@ -17,6 +17,8 @@ run_q7() {
     echo "Running Q7"
     ./scripts/q7_exp3_lunar_landar.sh
     ./scripts/q7_cheetah.sh
+    ./scripts/q7_cheetah_hparam.sh
+    ./scripts/q7_optimal_cheetah.sh
 }
 
 run_q8() {

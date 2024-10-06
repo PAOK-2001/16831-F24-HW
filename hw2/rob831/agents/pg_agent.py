@@ -78,7 +78,7 @@ class PGAgent(BaseAgent):
         if self.nn_baseline:
             values_normalized = self.actor.run_baseline_prediction(obs)
             assert values_normalized.ndim == q_values.ndim
-            values = normalize(values_normalized, np.mean(q_values), np.std(q_values))
+            values = unnormalize(values_normalized, np.mean(q_values), np.std(q_values))
             
             if self.gae_lambda is not None:
                 ## append a dummy T+1 value for simpler recursive calculation
