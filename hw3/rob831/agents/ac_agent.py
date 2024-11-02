@@ -1,9 +1,11 @@
+import numpy as np
 from collections import OrderedDict
 
 from rob831.critics.bootstrapped_continuous_critic import \
     BootstrappedContinuousCritic
 from rob831.infrastructure.replay_buffer import ReplayBuffer
-from rob831.infrastructure.utils import *
+from rob831.infrastructure.utils import normalize
+import rob831.infrastructure.pytorch_util as  ptu
 from rob831.policies.MLP_policy import MLPPolicyAC
 from .base_agent import BaseAgent
 
@@ -31,18 +33,18 @@ class ACAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        # TODO Implement the following pseudocode:
-        # for agent_params['num_critic_updates_per_agent_update'] steps,
-        #     update the critic
+        for step in range(self.agent_params['num_critic_updates_per_agent_update']):
+            loss_critic = self.critic.update(ob_no, ac_na, next_ob_no, re_n, terminal_n)
 
-        # advantage = estimate_advantage(...)
+        advantage = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
 
-        # for agent_params['num_actor_updates_per_agent_update'] steps,
-        #     update the actor
+        for srep in range(self.agent_params['num_actor_updates_per_agent_update']):
+            loss_actor = self.actor.update(ob_no, ac_na, advantage)
+
 
         loss = OrderedDict()
-        loss['Loss_Critic'] = TODO
-        loss['Loss_Actor'] = TODO
+        loss['Loss_Critic'] = loss_critic
+        loss['Loss_Actor'] = loss_actor
 
         return loss
 
@@ -53,10 +55,21 @@ class ACAgent(BaseAgent):
         # 3) estimate the Q value as Q(s, a) = r(s, a) + gamma*V(s')
         # HINT: Remember to cut off the V(s') term (ie set it to 0) at terminal states (ie terminal_n=1)
         # 4) calculate advantage (adv_n) as A(s, a) = Q(s, a) - V(s)
-        adv_n = TODO
+        obs = ptu.from_numpy(ob_no)
+        next_obs = ptu.from_numpy(next_ob_no)
+
+        v_value = self.critic.qa_values(obs)
+        v_prime = self.critic.qa_values(next_obs)
+
+        v_value = ptu.to_numpy(v_value)
+        v_prime = ptu.to_numpy(v_prime)
+
+        q_value = re_n + self.gamma * v_prime * (1 - terminal_n)
+
+        adv_n = q_value - v_value
 
         if self.standardize_advantages:
-            adv_n = TODO
+            adv_n = normalize(adv_n, np.mean(adv_n), np.std(adv_n))
         return adv_n
 
     def add_to_replay_buffer(self, paths):
