@@ -42,42 +42,24 @@ class DQNAgent(object):
             advanced one step, and the replay buffer should contain one more transition.
             Note that self.last_obs must always point to the new latest observation.
         """        
-
-        # TODO store the latest observation ("frame") into the replay buffer
-        # HINT: the replay buffer used here is `MemoryOptimizedReplayBuffer`
-            # in dqn_utils.py
-
-        self.replay_buffer_idx = TODO
-
+        # Store the latest observation in the replay buffer
+        self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
         eps = self.exploration.value(self.t)
-
-        # TODO use epsilon greedy exploration when selecting action
-        # HINT: take random action 
-            # with probability eps (see np.random.random())
-            # OR if your current step number (see self.t) is less that self.learning_starts
-        perform_random_action = TODO
+        # Take random action with probability eps OR if the number of steps is less than learning_starts
+        perform_random_action = self.t < self.learning_starts or np.random.random() < eps
         if perform_random_action:
-            action = TODO
+            action = np.random.randint(self.num_actions) #TODO: verify this
         else:
-            # HINT: Your actor will take in multiple previous observations ("frames") in order
-                # to deal with the partial observability of the environment. Get the most recent 
-                # `frame_history_len` observations using functionality from the replay buffer,
-                # and then use those observations as input to your actor. 
-            action = TODO
-        
-        # TODO take a step in the environment using the action from the policy
-        # HINT1: remember that self.last_obs must always point to the newest/latest observation
-        # HINT2: remember the following useful function that you've seen before:
-            #obs, reward, done, info = env.step(action)
-        TODO
-
-        # TODO store the result of taking this action into the replay buffer
-        # HINT1: see your replay buffer's `store_effect` function
-        # HINT2: one of the arguments you'll need to pass in is self.replay_buffer_idx from above
-        TODO
-
-        # TODO if taking this step resulted in done, reset the env (and the latest observation)
-        TODO
+            # Get frame history to feed to the actor and get the action
+            obs_history = self.replay_buffer.encode_recent_observation()
+            action = self.actor.get_action(obs_history)
+        # Take a step in the environment using the action from the policy
+        self.last_obs, reward, done, _ = self.env.step(action)
+        #  Store the effect of taking this action into the replay buffer
+        self.replay_buffer.store_effect(self.replay_buffer_idx, action, reward, done)
+        # If taking this step resulted in done, reset the env (and the latest observation)
+        if done:
+            self.last_obs = self.env.reset()
 
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
@@ -92,15 +74,18 @@ class DQNAgent(object):
                 and self.replay_buffer.can_sample(self.batch_size)
         ):
 
-            # TODO fill in the call to the update function using the appropriate tensors
             log = self.critic.update(
-                TODO
+                ob_no = ob_no,
+                ac_na = ac_na,
+                reward_n = re_n,
+                next_ob_no = next_ob_no,
+                terminal_n = terminal_n
             )
 
             # TODO update the target network periodically 
             # HINT: your critic already has this functionality implemented
             if self.num_param_updates % self.target_update_freq == 0:
-                TODO
+                self.critic.update_target_network()
 
             self.num_param_updates += 1
 

@@ -12,6 +12,8 @@ class ArgMaxPolicy(object):
         else:
             observation = obs[None]
         
-        ## TODO return the action that maxinmizes the Q-value 
-        # at the current observation as the output
+        # Return the action that maxinmizes the Q-value at the current observation as the output
+        # action = torch.argmax(self.critic.q_net(observation), dim=1, keepdim=True)
+        action = np.argmax(self.critic.qa_values(observation), axis=1)
+
         return action.squeeze()
