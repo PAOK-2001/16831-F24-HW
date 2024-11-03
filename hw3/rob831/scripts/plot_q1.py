@@ -35,14 +35,17 @@ def logs_to_dataframe(logs):
     return df
 
 
-def plot(exp_df):
+def plot(exp_df, out_dir='results', fig_show=False):
     import matplotlib.pyplot as plt
+    os.makedirs(out_dir, exist_ok=True)
+
     avg_df = exp_df.drop(columns=['tag'])
     grouped = avg_df.groupby(['step', 'network_type'])
     avg_df = grouped.mean().reset_index()
     variance = grouped["value"].var().reset_index(drop=True)
     avg_df['std_dev'] = variance ** 0.5
     sns.lineplot(data=avg_df, x='step', y='value', hue='network_type')
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     for network_type in avg_df['network_type'].unique():
         network_df = avg_df[avg_df['network_type'] == network_type]
         plt.fill_between(network_df['step'], network_df['value'] - network_df['std_dev'], network_df['value'] + network_df['std_dev'], alpha=0.2)
@@ -50,8 +53,12 @@ def plot(exp_df):
     plt.xlabel('Step')
     plt.ylabel('Average Return (across seeds)')
     plt.title('Average Return vs Step')
-    plt.legend(title='Network Type')
-    plt.show()
+    plt.legend(title='Experiment')
+    if fig_show:
+        plt.show()
+    plt.savefig(os.path.join(out_dir, 'q1_plot.png'), dpi = 500)
+
+    
 
 if __name__ == "__main__":
     logdir = 'data'
