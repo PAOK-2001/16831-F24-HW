@@ -33,13 +33,28 @@ class ACAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        for step in range(self.agent_params['num_critic_updates_per_agent_update']):
-            loss_critic = self.critic.update(ob_no, ac_na, next_ob_no, re_n, terminal_n)
+        for _ in range(self.agent_params['num_critic_updates_per_agent_update']):
+            loss_critic = self.critic.update(
+                ob_no= ob_no, 
+                ac_na= ac_na, 
+                next_ob_no= next_ob_no,
+                reward_n= re_n, 
+                terminal_n= terminal_n
+            )
 
-        advantage = self.estimate_advantage(ob_no, next_ob_no, re_n, terminal_n)
+        advantage = self.estimate_advantage(
+            ob_no= ob_no, 
+            next_ob_no= next_ob_no,
+            re_n= re_n,
+            terminal_n= terminal_n
+        )
 
-        for srep in range(self.agent_params['num_actor_updates_per_agent_update']):
-            loss_actor = self.actor.update(ob_no, ac_na, advantage)
+        for _ in range(self.agent_params['num_actor_updates_per_agent_update']):
+            loss_actor = self.actor.update(
+                observations = ob_no, 
+                actions = ac_na,
+                adv_n = advantage
+            )
 
 
         loss = OrderedDict()
@@ -58,8 +73,8 @@ class ACAgent(BaseAgent):
         obs = ptu.from_numpy(ob_no)
         next_obs = ptu.from_numpy(next_ob_no)
 
-        v_value = self.critic.qa_values(obs)
-        v_prime = self.critic.qa_values(next_obs)
+        v_value = self.critic.forward(obs)
+        v_prime = self.critic.forward(next_obs)
 
         v_value = ptu.to_numpy(v_value)
         v_prime = ptu.to_numpy(v_prime)
