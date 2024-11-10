@@ -61,7 +61,7 @@ def plot(exp_df, out_dir='results', fig_show=False):
     
 
 if __name__ == "__main__":
-    logdir = 'data'
+    logdir = 'run_logs'
     data_dirs = [os.path.join(logdir, folder) for folder in os.listdir(logdir) if 'q1' in folder]
     dfs = []
     for data_dir in data_dirs:
