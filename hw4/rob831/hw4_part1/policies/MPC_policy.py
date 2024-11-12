@@ -65,34 +65,49 @@ class MPCPolicy(BasePolicy):
             # Begin with randomly selected actions, then refine the sampling distribution
             # iteratively as described in Section 3.3, "Iterative Random-Shooting with Refinement" of
             # https://arxiv.org/pdf/1909.11652.pdf 
-            for i in range(self.cem_iterations):
-                # - Sample candidate sequences from a Gaussian with the current 
-                #   elite mean and variance
-                #     (Hint: remember that for the first iteration, we instead sample
-                #      uniformly at random just like we do for random-shooting)
-                # - Get the top `self.cem_num_elites` elites
-                #     (Hint: what existing function can we use to compute rewards for
-                #      our candidate sequences in order to rank them?)
-                # - Update the elite mean and variance
-                pass
 
-            # TODO(Q5): Set `cem_action` to the appropriate action chosen by CEM
-            cem_action = None
+            # Initiallize the random sampling
+            cem_action = np.random.uniform(
+                low=self.low,
+                high=self.high,
+                size=(num_sequences, horizon, self.ac_dim)
+            ) # (1, H, D_action)
+            mean = 0
+            variance = 1
+            for _ in range(self.cem_iterations):
+                # Get current elite mean and variance
+                action_scores = self.evaluate_candidate_sequences(cem_action, obs)
+                idx = np.argsort(action_scores)[-self.cem_num_elites:] # Sort the actions in ascending order
+                elite_actions = cem_action[idx] # Get the top J elite actions
 
+                proposed_mean = np.mean(elite_actions, axis=0)
+                proposed_variance = np.var(elite_actions, axis=0)
+
+                # TODO: verify is alpha is the tolerance value
+                if np.allclose(mean, proposed_mean, atol=self.cem_alpha) or np.allclose(variance, proposed_variance, atol=self.cem_alpha):
+                    break
+
+                # Update the elite mean and variance
+                mean = proposed_mean
+                variance = proposed_variance
+
+                # Sample candidate sequences from a Gaussian with the current elite mean and variance
+                cem_action = np.random.normal(mean, variance, size=(num_sequences, horizon, self.ac_dim))
+                cem_action = np.clip(cem_action, self.low, self.high) 
+            # Select the optimal action sequence 
+            cem_action = mean[np.newaxis, :, :]
             return cem_action[None]
         else:
             raise Exception(f"Invalid sample_strategy: {self.sample_strategy}")
 
     def evaluate_candidate_sequences(self, candidate_action_sequences, obs):
-        # TODO(Q2): for each model in ensemble, compute the predicted sum of rewards
-        # for each candidate action sequence.
-        #
-        # Then, return the mean predictions across all ensembles.
-        # Hint: the return value should be an array of shape (N,)
-        for model in self.dyn_models: 
-            pass
+        sum_of_rewards = np.zeros(shape= (candidate_action_sequences.shape[0], len(self.dyn_models))) # (N, M)
+        for i, model in enumerate(self.dyn_models):
+            sum_of_rewards[:, i] = self.calculate_sum_of_rewards(obs, candidate_action_sequences, model)
+        
+        # Return the mean predictions across all ensembles
+        return np.mean(sum_of_rewards, axis=1)
 
-        return TODO
 
     def get_action(self, obs):
         if self.data_statistics is None:
@@ -107,15 +122,13 @@ class MPCPolicy(BasePolicy):
             return candidate_action_sequences[0][0][None]
         else:
             predicted_rewards = self.evaluate_candidate_sequences(candidate_action_sequences, obs)
-
-            # pick the action sequence and return the 1st element of that sequence
-            best_action_sequence = None  # TODO (Q2)
-            action_to_take = None  # TODO (Q2)
+            min_idx = np.argmax(predicted_rewards) # TODO: check if this is argmin or argmax. I beliebe it should maximse the rewards
+            best_action_sequence = candidate_action_sequences[min_idx]
+            action_to_take = best_action_sequence[0]
             return action_to_take[None]  # Unsqueeze the first index
 
     def calculate_sum_of_rewards(self, obs, candidate_action_sequences, model):
         """
-
         :param obs: numpy array with the current observation. Shape [D_obs]
         :param candidate_action_sequences: numpy array with the candidate action
         sequences. Shape [N, H, D_action] where
@@ -126,16 +139,16 @@ class MPCPolicy(BasePolicy):
         :return: numpy array with the sum of rewards for each action sequence.
         The array should have shape [N].
         """
-        sum_of_rewards = None  # TODO (Q2)
-        # For each candidate action sequence, predict a sequence of
-        # states for each dynamics model in your ensemble.
-        # Once you have a sequence of predicted states from each model in
-        # your ensemble, calculate the sum of rewards for each sequence
-        # using `self.env.get_reward(predicted_obs, action)`
-        # You should sum across `self.horizon` time step.
-        # Hint: you should use model.get_prediction and you shouldn't need
-        #       to import pytorch in this file.
-        # Hint: Remember that the model can process observations and actions
-        #       in batch, which can be much faster than looping through each
-        #       action sequence.
+        N, H, _ = candidate_action_sequences.shape
+        sum_of_rewards = np.zeros(N)
+        curr_obs = np.tile(obs, (N, 1))  # Shape (N, D_obs)  
+
+        for t in range(H):
+            curr_action = candidate_action_sequences[:, t, :]
+            next_obs = model.get_prediction(curr_obs, curr_action, self.data_statistics)
+            reward, _ = self.env.get_reward(curr_obs, curr_action)
+            # Update the sum of rewards
+            sum_of_rewards += reward
+            curr_obs = next_obs
+            
         return sum_of_rewards
