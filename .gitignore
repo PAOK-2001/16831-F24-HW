@@ -1,10 +1,9 @@
 *.DS_Store
-hw1/data
-hw1/run_logs
 
-hw2/data
-hw2/run_logs
+**/data/
+**/run_logs/
 
+*.pdf
 
 submission
 
