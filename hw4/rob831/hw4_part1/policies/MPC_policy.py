@@ -83,7 +83,7 @@ class MPCPolicy(BasePolicy):
                 proposed_mean = np.mean(elite_actions, axis=0)
                 proposed_variance = np.var(elite_actions, axis=0)
 
-                # TODO: verify is alpha is the tolerance value
+                # TODO: verify if alpha is the tolerance value
                 if np.allclose(mean, proposed_mean, atol=self.cem_alpha) or np.allclose(variance, proposed_variance, atol=self.cem_alpha):
                     break
 
@@ -101,12 +101,13 @@ class MPCPolicy(BasePolicy):
             raise Exception(f"Invalid sample_strategy: {self.sample_strategy}")
 
     def evaluate_candidate_sequences(self, candidate_action_sequences, obs):
-        sum_of_rewards = np.zeros(shape= (candidate_action_sequences.shape[0], len(self.dyn_models))) # (N, M)
-        for i, model in enumerate(self.dyn_models):
-            sum_of_rewards[:, i] = self.calculate_sum_of_rewards(obs, candidate_action_sequences, model)
-        
+        sum_of_rewards = []
+        for model in self.dyn_models:
+            sum_of_rewards.append(self.calculate_sum_of_rewards(obs, candidate_action_sequences, model))        
         # Return the mean predictions across all ensembles
-        return np.mean(sum_of_rewards, axis=1)
+        sum_of_rewards = np.array(sum_of_rewards)
+        mean_rewards = np.mean(sum_of_rewards, axis=0)
+        return mean_rewards
 
 
     def get_action(self, obs):
@@ -122,8 +123,8 @@ class MPCPolicy(BasePolicy):
             return candidate_action_sequences[0][0][None]
         else:
             predicted_rewards = self.evaluate_candidate_sequences(candidate_action_sequences, obs)
-            min_idx = np.argmax(predicted_rewards) # TODO: check if this is argmin or argmax. I beliebe it should maximse the rewards
-            best_action_sequence = candidate_action_sequences[min_idx]
+            max_idx = np.argmax(predicted_rewards) # TODO: check if this is argmin or argmax. I beliebe it should maximse the rewards
+            best_action_sequence = candidate_action_sequences[max_idx]
             action_to_take = best_action_sequence[0]
             return action_to_take[None]  # Unsqueeze the first index
 
@@ -150,5 +151,5 @@ class MPCPolicy(BasePolicy):
             # Update the sum of rewards
             sum_of_rewards += reward
             curr_obs = next_obs
-            
+
         return sum_of_rewards

@@ -104,23 +104,28 @@ class FFModel(nn.Module, BaseModel):
         :return: a numpy array of the predicted next-states (s_t+1)
         """
         # Get the predicted next-states (s_t+1) as a numpy array
+        self.update_statistics(
+            data_statistics['obs_mean'],
+            data_statistics['obs_std'],
+            data_statistics['acs_mean'],
+            data_statistics['acs_std'],
+            data_statistics['delta_mean'],
+            data_statistics['delta_std'],
+        )
+
         prediction, _ = self.forward(
             ptu.from_numpy(obs),
             ptu.from_numpy(acs),
-            ptu.from_numpy(data_statistics['obs_mean']),
-            ptu.from_numpy(data_statistics['obs_std']),
-            ptu.from_numpy(data_statistics['acs_mean']),
-            ptu.from_numpy(data_statistics['acs_std']),
-            ptu.from_numpy(data_statistics['delta_mean']),
-            ptu.from_numpy(data_statistics['delta_std']),
+            self.obs_mean,
+            self.obs_std,
+            self.acs_mean,
+            self.acs_std,
+            self.delta_mean,
+            self.delta_std,
         )
         
-        
-        # TODO(Q1) get the predicted next-states (s_t+1) as a numpy array
-        # Hint: `self(...)` returns a tuple, but you only need to use one of the
-        # outputs.
-        prediction = ptu.to_numpy(prediction)
-        return prediction
+        pred = ptu.to_numpy(prediction)
+        return pred
 
     def update(self, observations, actions, next_observations, data_statistics):
         """
@@ -137,27 +142,36 @@ class FFModel(nn.Module, BaseModel):
              - 'delta_std'
         :return:
         """
+        self.update_statistics(
+            data_statistics['obs_mean'],
+            data_statistics['obs_std'],
+            data_statistics['acs_mean'],
+            data_statistics['acs_std'],
+            data_statistics['delta_mean'],
+            data_statistics['delta_std'],
+        )
+
         # Compute the normalized target for the model.
         real_delta = next_observations - observations
         target = normalize(real_delta, 
-                           data_statistics['delta_mean'], 
-                           data_statistics['delta_std']
+                           ptu.to_numpy(self.delta_mean),
+                           ptu.to_numpy(self.delta_std)
                 )
         target = ptu.from_numpy(target)
         # Compute the normalized predictions of the model.
         _ , pred_delta = self.forward(
             ptu.from_numpy(observations),
             ptu.from_numpy(actions),
-            ptu.from_numpy(data_statistics['obs_mean']),
-            ptu.from_numpy(data_statistics['obs_std']),
-            ptu.from_numpy(data_statistics['acs_mean']),
-            ptu.from_numpy(data_statistics['acs_std']),
-            ptu.from_numpy(data_statistics['delta_mean']),
-            ptu.from_numpy(data_statistics['delta_std']),
+            self.obs_mean,
+            self.obs_std,
+            self.acs_mean,
+            self.acs_std,
+            self.delta_mean,
+            self.delta_std,
         )
 
         # Compute the loss between real change in observations and predicted change
-        loss = self.loss(target, pred_delta)
+        loss = self.loss(pred_delta, target)
 
         self.optimizer.zero_grad()
         loss.backward()
