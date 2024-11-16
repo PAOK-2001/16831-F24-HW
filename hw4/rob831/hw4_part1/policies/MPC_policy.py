@@ -65,37 +65,27 @@ class MPCPolicy(BasePolicy):
             # Begin with randomly selected actions, then refine the sampling distribution
             # iteratively as described in Section 3.3, "Iterative Random-Shooting with Refinement" of
             # https://arxiv.org/pdf/1909.11652.pdf 
+            mean = np.zeros((horizon, self.ac_dim))
+            variance =  np.ones((horizon, self.ac_dim))
 
-            # Initiallize the random sampling
-            cem_action = np.random.uniform(
-                low=self.low,
-                high=self.high,
-                size=(num_sequences, horizon, self.ac_dim)
-            ) # (1, H, D_action)
-            mean = 0
-            variance = 1
-            for _ in range(self.cem_iterations):
+            for iter in range(self.cem_iterations):
+       
+                cem_action = np.random.normal(
+                            loc=mean, 
+                            scale=np.sqrt(variance), 
+                            size=(num_sequences, horizon, self.ac_dim))
+                cem_action = np.clip(cem_action, self.low, self.high)
+                    
                 # Get current elite mean and variance
                 action_scores = self.evaluate_candidate_sequences(cem_action, obs)
-                idx = np.argsort(action_scores)[-self.cem_num_elites:] # Sort the actions in ascending order
-                elite_actions = cem_action[idx] # Get the top J elite actions
+                idx = np.argsort(action_scores)[-self.cem_num_elites:]
+                elite_actions = cem_action[idx] 
 
-                proposed_mean = np.mean(elite_actions, axis=0)
-                proposed_variance = np.var(elite_actions, axis=0)
+                mean     = self.cem_alpha * np.mean(elite_actions, axis=0) + (1 - self.cem_alpha) * mean
+                variance = self.cem_alpha * np.var(elite_actions, axis=0) + (1 - self.cem_alpha) * mean
+                
 
-                # TODO: verify if alpha is the tolerance value
-                if np.allclose(mean, proposed_mean, atol=self.cem_alpha) or np.allclose(variance, proposed_variance, atol=self.cem_alpha):
-                    break
-
-                # Update the elite mean and variance
-                mean = proposed_mean
-                variance = proposed_variance
-
-                # Sample candidate sequences from a Gaussian with the current elite mean and variance
-                cem_action = np.random.normal(mean, variance, size=(num_sequences, horizon, self.ac_dim))
-                cem_action = np.clip(cem_action, self.low, self.high) 
-            # Select the optimal action sequence 
-            cem_action = mean[np.newaxis, :, :]
+            cem_action = mean
             return cem_action[None]
         else:
             raise Exception(f"Invalid sample_strategy: {self.sample_strategy}")
