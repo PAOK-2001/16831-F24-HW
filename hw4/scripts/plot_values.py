@@ -50,7 +50,7 @@ def plot_Q3(DPI=600):
     tag = 'Eval_AverageReturn'
 
     # Obstacles
-    logdir = 'rob831/data/hw4_q3_obstacles_obstacles-hw4_part1-v0_15-11-2024_19-34-59'
+    logdir = 'data/hw4_q3_obstacles_obstacles-hw4_part1-v0_15-11-2024_19-34-59'
     q3_events = extract_scalar_events(logdir, tag)
     q3_df = pd.DataFrame(q3_events, columns=['step', 'Eval_AverageReturn'])
     sns.lineplot(data=q3_df, x='step', y='Eval_AverageReturn')
@@ -85,7 +85,7 @@ def plot_Q4(DPI=600):
     import matplotlib.pyplot as plt
     tag = 'Eval_AverageReturn'
 
-    logdir_base = 'rob831/data/'
+    logdir_base = 'data/'
     q4_dirs = [os.path.join(logdir_base, d) for d in os.listdir(logdir_base) if 'hw4_q4' in d]
 
     ensemble_sweep = [d for d in q4_dirs if 'ensemble' in d]
@@ -141,7 +141,7 @@ def plot_Q5():
     import matplotlib.pyplot as plt
     tag = 'Eval_AverageReturn'
 
-    logdir_base = 'rob831/data/'
+    logdir_base = 'data/'
     q5_dirs = [os.path.join(logdir_base, d) for d in os.listdir(logdir_base) if 'hw4_q5' in d]
 
     q5_data = []
@@ -159,5 +159,6 @@ def plot_Q5():
     plt.show()
 
 if __name__ == '__main__':
-
+    plot_Q3()
+    plot_Q4()
     plot_Q5()
